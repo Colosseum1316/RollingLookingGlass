@@ -103,6 +103,10 @@ async fn handle_packets(
 
     // Read server address. It's not used.
     let resize = read_varint(&mut socket).await?;
+    if resize > 255 {
+        debug!("{} sent a server address that's too long", &addr);
+        return Err(Box::from("Server address too long"));
+    }
     socket.read_exact(&mut vec![0u8; resize]).await?;
     debug!("Read server address from {}", &addr);
 
@@ -182,8 +186,38 @@ async fn handle_packets(
             return Err(Box::from("Not a Ping Request"));
         }
     } else {
-        // TODO: LOGIN START.
-        return Err(Box::from("Sorry, loginstart not implemented yet"));
+        read_varint(&mut socket).await?;
+
+        socket.read_exact(slice::from_mut(&mut byte)).await?;
+        if byte != 0u8 {
+            debug!(
+                "{} sent a Login Start packet that has incorrect packet id",
+                &addr
+            );
+            return Err(Box::from("Unknown packet id"));
+        }
+
+        let resize = read_varint(&mut socket).await?;
+        let ign_length = resize;
+        if ign_length == 0 || ign_length > 16 {
+            debug!("{} sent an illegal username which is too long", &addr);
+            return Err(Box::from("Username too long"));
+        }
+        // Immediately send Disconnect (Login), the rest of the buffer is ignored.
+        let payload = json!({
+            "text": format!("Your IP address is {}", &addr.ip()),
+        })
+        .to_string();
+        let strlen = payload.len();
+        let strlen_varint = create_varint(strlen as i32);
+        let packet_len = 1 + strlen_varint.len() + strlen;
+        let packet_len_varint = create_varint(packet_len as i32);
+        debug!("Writing Disconnect (Login) packet to {}", &addr);
+        socket.write_all(&packet_len_varint).await?;
+        socket.write_u8(0x00).await?;
+        socket.write_all(&strlen_varint).await?;
+        socket.write_all(payload.as_bytes()).await?;
+        socket.shutdown().await?;
     }
 
     Ok(())
@@ -194,10 +228,9 @@ async fn read_varint(stream: &mut TcpStream) -> Result<usize, Box<dyn Error>> {
     let mut res = 0i32;
     for i in 0.. {
         if i > 5 {
-            return Err(Box::from("Malformed response, not a valid varint"));
+            return Err(Box::from("Not a valid varint"));
         }
         let buf = slice::from_mut(&mut byte);
-        #[allow(clippy::unused_io_amount)]
         stream.read_exact(buf).await?;
         if buf.is_empty() {
             break;
@@ -208,7 +241,7 @@ async fn read_varint(stream: &mut TcpStream) -> Result<usize, Box<dyn Error>> {
         }
     }
     if res <= 0 {
-        return Err(Box::from("Malformed response, varint not bigger than 0"));
+        return Err(Box::from("Varint not bigger than 0"));
     }
     Ok(res as usize)
 }

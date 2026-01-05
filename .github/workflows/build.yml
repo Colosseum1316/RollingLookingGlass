@@ -61,8 +61,3 @@ jobs:
 
       - name: Run
         run: make ci
-
-      - name: Write job summary
-        uses: livewing/lcov-job-summary@v1.2.0
-        with:
-          lcov: ./lcov.info

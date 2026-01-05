@@ -2,6 +2,8 @@
 name = "rolling_looking_glass"
 version = "0.0.1"
 edition = "2021"
+publish = false
+license-file = "LICENSE"
 
 [dependencies]
 flashlight = { git = "https://github.com/Colosseum1316/Flashlight.git", rev = "b425e06e12bba677eb8037273fa812ce91c16ce4" }

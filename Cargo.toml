@@ -1,0 +1,14 @@
+[package]
+name = "rolling_looking_glass"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+flashlight = { git = "https://github.com/Colosseum1316/Flashlight.git", rev = "b425e06e12bba677eb8037273fa812ce91c16ce4" }
+rolling_glass = { git = "https://github.com/Colosseum1316/RollingGlass.git", rev = "13c549ca25acb8a192eac64569677a4cca81e172" }
+tokio = { version = "1.49.0", features = ["full"] }
+clap = { version = "4.5.54", features = ["derive"] }
+serde_json = "1.0.148"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter", "fmt", "chrono", "time", "local-time"] }
+time = { version = "0.3.44", features = ["macros"] }

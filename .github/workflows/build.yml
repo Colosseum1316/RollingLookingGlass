@@ -1,0 +1,68 @@
+name: Build and test
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "src/*.rs"
+      - "tests/*.rs"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "!.gitignore"
+      - "!LICENSE"
+      - "!README.md"
+  pull_request:
+    branches:
+      - "master"
+    paths:
+      - "src/*.rs"
+      - "tests/*.rs"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "!.gitignore"
+      - "!LICENSE"
+      - "!README.md"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_label: [
+          ubuntu-24.04, ubuntu-22.04,
+          ubuntu-24.04-arm, ubuntu-22.04-arm,
+          windows-latest,
+          macos-26, macos-15, macos-14,
+        ]
+    name: Build and test on ${{ matrix.runner_label }}
+    runs-on: ${{ matrix.runner_label }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          cache: true
+          override: true
+
+      - name: Install cargos
+        run: cargo install cargo-tarpaulin
+
+      - name: Run
+        run: make ci
+
+      - name: Write job summary
+        uses: livewing/lcov-job-summary@v1.2.0
+        with:
+          lcov: ./lcov.info
